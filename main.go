@@ -8,6 +8,6 @@ import (
 )
 
 func main() {
-	handler := router.NewHandler(storage.MemoryStorage{})
+	handler := router.NewHandler(storage.NewMemoryStorage())
 	log.Fatal(http.ListenAndServe(":9090", handler))
 }
