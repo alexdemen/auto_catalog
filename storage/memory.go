@@ -1,31 +1,71 @@
 package storage
 
-import "github.com/alexdemen/auto_catalog/model"
+import (
+	"errors"
+	"fmt"
+	"github.com/alexdemen/auto_catalog/model"
+	"sync"
+)
 
 type MemoryStorage struct {
-	data map[int64]*model.Car
+	data      map[int]*model.Car
+	idCounter int
+	mutex     sync.RWMutex
 }
 
 func NewMemoryStorage() *MemoryStorage {
-	store := MemoryStorage{data: make(map[int64]*model.Car)}
-	store.data[1] = &model.Car{ID: 1, BrandName: "BMW", Model: "X5", Price: 450000, Status: model.IN_STOCK_STATUS}
-	store.data[2] = &model.Car{ID: 2, BrandName: "BMW", Model: "X5", Price: 450000, Status: model.OUT_OF_SALES_STATUS}
-	store.data[3] = &model.Car{ID: 3, BrandName: "BMW", Model: "X5", Price: 450000, Status: model.SOLD_STATUS}
-	store.data[4] = &model.Car{ID: 4, BrandName: "BMW", Model: "X5", Price: 450000, Status: model.TRANSIT_STATUS}
-	store.data[5] = &model.Car{ID: 5, BrandName: "BMW", Model: "X5", Price: 450000, Status: model.SOLD_STATUS}
-
+	store := MemoryStorage{data: make(map[int]*model.Car)}
 	return &store
 }
 
-func (m MemoryStorage) GetCars() []*model.Car {
+func (m *MemoryStorage) GetCars() ([]*model.Car, error) {
 	result := make([]*model.Car, 0, len(m.data))
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	for _, val := range m.data {
 		result = append(result, val)
 	}
 
-	return result
+	return result, nil
 }
 
-func (m MemoryStorage) AddCar(car model.Car) error {
-	panic("implement me")
+func (m *MemoryStorage) AddCar(car *model.Car) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.idCounter++
+	car.ID = m.idCounter
+	m.data[car.ID] = car
+
+	return nil
+}
+
+func (m *MemoryStorage) GetCar(id int) (*model.Car, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	if car, exist := m.data[id]; exist {
+		return car, nil
+	}
+
+	return nil, errors.New(fmt.Sprintf("car with id '%d' not found", id))
+}
+
+func (m *MemoryStorage) DeleteCar(id int) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	delete(m.data, id)
+
+	return nil
+}
+
+func (m *MemoryStorage) Update(car *model.Car) error {
+	if _, exist := m.data[car.ID]; !exist {
+		return errors.New("car with id '%d' not exist")
+	}
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.data[car.ID] = car
+
+	return nil
 }

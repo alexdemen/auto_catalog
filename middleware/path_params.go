@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func Identity(next func(w http.ResponseWriter, r *http.Request), pattern string) http.HandlerFunc {
+func PathParams(next func(w http.ResponseWriter, r *http.Request), pattern string) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctxValues := getSegments(r.URL.Path, pattern)
 		ctx := r.Context()
